@@ -128,8 +128,8 @@ export function computeStats(list: Respondent[]): Stats {
 
   let lastUpdated: string | null = null;
   for (const r of list) {
-    if (r.timestamp && (!lastUpdated || r.timestamp.toISOString() > lastUpdated)) {
-      lastUpdated = r.timestamp.toISOString();
+    if (r.timestamp && (!lastUpdated || r.timestamp > lastUpdated)) {
+      lastUpdated = r.timestamp;
     }
   }
 

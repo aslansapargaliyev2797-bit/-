@@ -34,7 +34,7 @@ function toRespondent(cols: string[]): Respondent | null {
   const { filial, filialOrder, unit } = parseBranch(row.branchRaw);
 
   // Sheet timestamps look like "06.08.2026 17:11:15" (DD.MM.YYYY HH:mm:ss).
-  let timestamp: Date | null = null;
+  let timestamp: string | null = null;
   const tsMatch = row.timestamp.match(
     /(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/
   );
@@ -47,7 +47,7 @@ function toRespondent(cols: string[]): Respondent | null {
       Number(h),
       Number(min),
       Number(s)
-    );
+    ).toISOString();
   }
 
   return {
@@ -123,10 +123,3 @@ export const getRespondents = cache(async (): Promise<Respondent[]> => {
   return respondents;
 });
 
-export function lastUpdated(respondents: Respondent[]): Date | null {
-  let max: Date | null = null;
-  for (const r of respondents) {
-    if (r.timestamp && (!max || r.timestamp > max)) max = r.timestamp;
-  }
-  return max;
-}

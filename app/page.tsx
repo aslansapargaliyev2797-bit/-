@@ -1,12 +1,10 @@
 import { getRespondents } from "@/lib/data";
-import { computeStats } from "@/lib/aggregate";
-import { StatsSections } from "@/components/StatsSections";
+import { Explorer } from "@/components/Explorer";
 
 export const dynamic = "force-dynamic";
 
 export default async function OverviewPage() {
   const respondents = await getRespondents();
-  const stats = computeStats(respondents);
 
   return (
     <div className="flex flex-col gap-6">
@@ -18,10 +16,11 @@ export default async function OverviewPage() {
           Общая статистика
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          По всем филиалам и подразделениям вместе
+          Выберите филиал → структурную единицу → службу, чтобы посмотреть срез,
+          или оставьте «Все», чтобы увидеть данные по всей компании
         </p>
       </div>
-      <StatsSections stats={stats} showFilialDistribution />
+      <Explorer respondents={respondents} />
     </div>
   );
 }

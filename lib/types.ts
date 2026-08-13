@@ -80,7 +80,7 @@ export const RAW_COLUMNS: (keyof RawAnswerRow)[] = [
 
 /** A parsed, analysis-ready respondent record. No PII (no id/email/recs text). */
 export interface Respondent {
-  timestamp: Date | null;
+  timestamp: string | null; // ISO 8601, so it's safe to pass straight to a Client Component
   filial: string; // "03. УМГ Атырау"
   filialOrder: number; // leading number, for stable sort ("01." -> 1)
   unit: string | null; // "ЛПУ Индер" | "АУП" | null
