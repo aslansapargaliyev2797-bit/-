@@ -39,13 +39,26 @@ export function HeatmapView({ data }: { data: MatrixData }) {
   const [deptFilter, setDeptFilter] = useState(ALL);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const filials = useMemo(
+  const filialsInFilter = useMemo(
     () => (filialFilter === ALL ? data.filials : [filialFilter]),
     [data.filials, filialFilter]
   );
-  const departments = useMemo(
+  const departmentsInFilter = useMemo(
     () => (deptFilter === ALL ? data.departments : [deptFilter]),
     [data.departments, deptFilter]
+  );
+
+  // Hide rows/columns that would only show "нет данных" everywhere in the
+  // current filter — e.g. a service that doesn't exist in the selected
+  // filial shouldn't still take up a blank column.
+  const hasCell = (f: string, d: string) => Boolean(data.cells[`${f}${CELL_SEP}${d}`]);
+  const departments = useMemo(
+    () => departmentsInFilter.filter((d) => filialsInFilter.some((f) => hasCell(f, d))),
+    [departmentsInFilter, filialsInFilter, data.cells]
+  );
+  const filials = useMemo(
+    () => filialsInFilter.filter((f) => departmentsInFilter.some((d) => hasCell(f, d))),
+    [filialsInFilter, departmentsInFilter, data.cells]
   );
 
   const selectedStats = selected ? data.statsByCell[selected] : null;
