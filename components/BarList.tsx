@@ -5,12 +5,18 @@ export function BarList({
   valueLabel = "pct",
   color = "var(--series-1)",
   colorFor,
+  valueText,
+  detailFor,
   maxItems,
 }: {
   data: Bucket[];
   valueLabel?: "pct" | "count";
   color?: string;
   colorFor?: (label: string) => string;
+  /** Overrides the auto pct/count formatting with custom text per row. */
+  valueText?: (label: string) => string;
+  /** Small muted line under the value — use to spell out what the number means. */
+  detailFor?: (label: string) => string | undefined;
   maxItems?: number;
 }) {
   const items = maxItems ? data.slice(0, maxItems) : data;
@@ -29,9 +35,10 @@ export function BarList({
       {items.map((d) => {
         const widthPct = Math.max((d.pct / max) * 100, 2);
         const barColor = colorFor ? colorFor(d.label) : color;
+        const detail = detailFor?.(d.label);
         return (
           <div key={d.label} className="min-w-0">
-            <div className="flex items-baseline justify-between gap-2 mb-1">
+            <div className="flex items-start justify-between gap-2 mb-1">
               <span
                 className="text-sm truncate"
                 style={{ color: "var(--text-secondary)" }}
@@ -39,13 +46,22 @@ export function BarList({
               >
                 {d.label}
               </span>
-              <span
-                className="text-sm font-medium tabular-nums shrink-0"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {valueLabel === "pct"
-                  ? `${d.pct.toFixed(1)}%`
-                  : d.count.toLocaleString("ru-RU")}
+              <span className="text-right shrink-0">
+                <span
+                  className="block text-sm font-medium tabular-nums"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {valueText
+                    ? valueText(d.label)
+                    : valueLabel === "pct"
+                      ? `${d.pct.toFixed(1)}%`
+                      : d.count.toLocaleString("ru-RU")}
+                </span>
+                {detail && (
+                  <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                    {detail}
+                  </span>
+                )}
               </span>
             </div>
             <div

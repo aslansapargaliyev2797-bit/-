@@ -21,14 +21,14 @@ export default async function DepartmentsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-          Подразделения (службы)
+          Службы
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
           {groups.length} служб · {respondents.length.toLocaleString("ru-RU")} анкет
         </p>
       </div>
       <RankingView
-        dimensionLabel="Подразделение"
+        dimensionLabel="Служба"
         rows={rows}
         statsByGroup={statsByGroup}
       />

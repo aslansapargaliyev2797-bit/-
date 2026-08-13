@@ -13,6 +13,7 @@ function formatDate(iso: string | null): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Almaty",
   });
 }
 
@@ -25,8 +26,6 @@ export function StatsSections({
 }) {
   const highRisk =
     stats.riskLevel.find((b) => b.label === "Высокий риск")?.pct ?? 0;
-  const moderateRisk =
-    stats.riskLevel.find((b) => b.label === "Умеренный риск")?.pct ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -183,10 +182,6 @@ export function StatsSections({
       >
         <BarList data={stats.riskFactors} color="var(--series-8)" />
       </Card>
-
-      <p className="text-xs text-center pb-2" style={{ color: "var(--text-muted)" }}>
-        Средний умеренный риск: {moderateRisk.toFixed(1)}%
-      </p>
     </div>
   );
 }

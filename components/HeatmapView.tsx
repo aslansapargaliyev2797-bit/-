@@ -8,6 +8,16 @@ import { StatsSections } from "./StatsSections";
 
 const ALL = "__all__";
 
+const LEGEND_STEPS: [string, string][] = [
+  ["var(--seq-100)", "0–3%"],
+  ["var(--seq-200)", "3–6%"],
+  ["var(--seq-300)", "6–10%"],
+  ["var(--seq-400)", "10–15%"],
+  ["var(--seq-500)", "15–22%"],
+  ["var(--seq-600)", "22–30%"],
+  ["var(--seq-700)", "30%+"],
+];
+
 function seqColor(pct: number): string {
   if (pct <= 0) return "var(--gridline)";
   if (pct < 3) return "var(--seq-100)";
@@ -44,7 +54,19 @@ export function HeatmapView({ data }: { data: MatrixData }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="Фильтры">
+      <Card title="Что это такое">
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          Каждая ячейка ниже — это одно сочетание <b>«филиал» + «служба»</b>
+          (например «03. УМГ Атырау» и «ЭХЗ» вместе). Число и цвет ячейки —
+          доля анкет с <b>высоким риском</b> среди сотрудников именно этого
+          сочетания; число под процентом — сколько человек в сумме заполнили
+          анкету в этом сочетании. Чем темнее и краснее ячейка — тем выше доля
+          высокого риска. Нажмите на ячейку, чтобы раскрыть полную статистику
+          именно по ней.
+        </p>
+      </Card>
+
+      <Card title="Фильтры" subtitle="Можно сузить карту до одного филиала и/или одной службы">
         <div className="flex flex-wrap gap-4">
           <label className="flex flex-col gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
             Филиал
@@ -70,7 +92,7 @@ export function HeatmapView({ data }: { data: MatrixData }) {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
-            Подразделение
+            Служба
             <select
               value={deptFilter}
               onChange={(e) => {
@@ -84,7 +106,7 @@ export function HeatmapView({ data }: { data: MatrixData }) {
                 color: "var(--text-primary)",
               }}
             >
-              <option value={ALL}>Все подразделения</option>
+              <option value={ALL}>Все службы</option>
               {data.departments.map((d) => (
                 <option key={d} value={d}>
                   {d}
@@ -96,9 +118,23 @@ export function HeatmapView({ data }: { data: MatrixData }) {
       </Card>
 
       <Card
-        title="Тепловая карта: филиал × подразделение"
-        subtitle="Цвет и цифра — доля анкет с высоким риском (%). Нажмите на ячейку для подробностей."
+        title="Тепловая карта: филиал × служба"
+        subtitle="% и число в ячейке — доля и количество анкет с высоким риском. Нажмите на ячейку для подробностей."
       >
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            % анкет с высоким риском:
+          </span>
+          {LEGEND_STEPS.map(([color, label]) => (
+            <span key={label} className="flex items-center gap-1 text-xs" style={{ color: "var(--text-secondary)" }}>
+              <span
+                className="inline-block w-3 h-3 rounded-sm"
+                style={{ background: color }}
+              />
+              {label}
+            </span>
+          ))}
+        </div>
         <div className="overflow-x-auto">
           <table className="border-collapse text-xs min-w-full">
             <thead>
@@ -143,7 +179,11 @@ export function HeatmapView({ data }: { data: MatrixData }) {
                               selected === key ? "2px solid var(--series-2)" : "none",
                             outlineOffset: -2,
                           }}
-                          title={cell ? `${f} × ${d}: ${cell.count} чел., ${pct.toFixed(1)}% высокий риск` : "Нет данных"}
+                          title={
+                            cell
+                              ? `${f} × ${d}: ${cell.highRiskCount} из ${cell.count} чел. (${pct.toFixed(1)}%) — высокий риск`
+                              : "Нет анкет в этом сочетании"
+                          }
                         >
                           {cell ? (
                             <>
@@ -165,7 +205,10 @@ export function HeatmapView({ data }: { data: MatrixData }) {
       </Card>
 
       {selectedStats && selectedCell && (
-        <Card title={`${selFilial} × ${selDept}`} subtitle={`${selectedCell.count} анкет`}>
+        <Card
+          title={`${selFilial} × ${selDept}`}
+          subtitle={`${selectedCell.count} анкет · ${selectedCell.highRiskPct.toFixed(1)}% высокого риска (${selectedCell.highRiskCount} чел.)`}
+        >
           <StatsSections stats={selectedStats} />
         </Card>
       )}

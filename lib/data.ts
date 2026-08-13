@@ -16,6 +16,13 @@ const SHEET_TAB = process.env.GOOGLE_SHEET_TAB ?? "ANSWERS";
 // CSV (which includes email addresses) never reaches the client.
 const REVALIDATE_SECONDS = 300;
 
+// The form's "Отметка времени" is Google Forms' own timestamp, always in the
+// form owner's timezone — Asia/Almaty, UTC+5 year-round (no DST). The server
+// this code runs on isn't necessarily in that timezone (Vercel runs UTC), so
+// the offset has to be applied explicitly rather than relying on `new Date(...)`
+// to interpret the parsed components as "local".
+const SHEET_TZ_OFFSET_HOURS = 5;
+
 function sheetCsvUrl(): string {
   const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`;
   const params = new URLSearchParams({ tqx: "out:csv", sheet: SHEET_TAB });
@@ -41,12 +48,14 @@ function toRespondent(cols: string[]): Respondent | null {
   if (tsMatch) {
     const [, d, m, y, h, min, s] = tsMatch;
     timestamp = new Date(
-      Number(y),
-      Number(m) - 1,
-      Number(d),
-      Number(h),
-      Number(min),
-      Number(s)
+      Date.UTC(
+        Number(y),
+        Number(m) - 1,
+        Number(d),
+        Number(h) - SHEET_TZ_OFFSET_HOURS,
+        Number(min),
+        Number(s)
+      )
     ).toISOString();
   }
 

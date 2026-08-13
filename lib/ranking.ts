@@ -6,8 +6,11 @@ export interface GroupRow {
   avgScore: number | null;
   avgBmi: number | null;
   highRiskPct: number;
+  highRiskCount: number;
   moderateRiskPct: number;
+  moderateRiskCount: number;
   smokingPct: number;
+  smokingCount: number;
   topRiskFactor: string | null;
   respondents: Respondent[];
 }
@@ -29,6 +32,43 @@ export const PROBLEM_METRICS = [
 ] as const;
 
 export type ProblemMetricId = (typeof PROBLEM_METRICS)[number]["id"];
+
+const PCT_METRIC_COUNT: Partial<Record<ProblemMetricId, keyof GroupSummary>> = {
+  highRiskPct: "highRiskCount",
+  moderateRiskPct: "moderateRiskCount",
+  smokingPct: "smokingCount",
+};
+
+/** The headline number for a metric — "22.9%" or "6.8". */
+export function formatMetricValue(
+  row: GroupSummary,
+  metric: ProblemMetricId
+): string {
+  switch (metric) {
+    case "highRiskPct":
+      return `${row.highRiskPct.toFixed(1)}%`;
+    case "moderateRiskPct":
+      return `${row.moderateRiskPct.toFixed(1)}%`;
+    case "smokingPct":
+      return `${row.smokingPct.toFixed(1)}%`;
+    case "avgScore":
+      return row.avgScore !== null ? row.avgScore.toFixed(1) : "—";
+    case "avgBmi":
+      return row.avgBmi !== null ? row.avgBmi.toFixed(1) : "—";
+  }
+}
+
+/** The context that makes the headline number readable — "8 из 35 чел." or "среднее по 35 чел.". */
+export function formatMetricDetail(
+  row: GroupSummary,
+  metric: ProblemMetricId
+): string {
+  const countKey = PCT_METRIC_COUNT[metric];
+  if (countKey) {
+    return `${row[countKey]} из ${row.count} чел.`;
+  }
+  return `среднее по ${row.count} чел.`;
+}
 
 function avg(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -78,8 +118,11 @@ export function groupBy(
       avgScore: avg(members.map((r) => r.score).filter((v): v is number => v !== null)),
       avgBmi: avg(members.map((r) => r.bmi).filter((v): v is number => v !== null)),
       highRiskPct: count > 0 ? (highRisk / count) * 100 : 0,
+      highRiskCount: highRisk,
       moderateRiskPct: count > 0 ? (moderateRisk / count) * 100 : 0,
+      moderateRiskCount: moderateRisk,
       smokingPct: count > 0 ? (smokers / count) * 100 : 0,
+      smokingCount: smokers,
       topRiskFactor,
       respondents: members,
     });
