@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { Stats } from "@/lib/stats-types";
+import Link from "next/link";
 import {
   PROBLEM_METRICS,
   formatMetricValue,
@@ -11,7 +11,6 @@ import {
 } from "@/lib/ranking";
 import { Card } from "./Card";
 import { BarList } from "./BarList";
-import { StatsSections } from "./StatsSections";
 
 function metricValue(row: GroupSummary, metric: ProblemMetricId): number {
   const v = row[metric];
@@ -27,12 +26,13 @@ function riskColor(pct: number): string {
 export function RankingView({
   dimensionLabel,
   rows,
-  statsByGroup,
+  exploreParam,
   unitBreakdown,
 }: {
   dimensionLabel: string;
   rows: GroupSummary[];
-  statsByGroup: Record<string, Stats>;
+  /** Which query param selects this dimension on the "Общее" explorer page. */
+  exploreParam: "filial" | "dept";
   unitBreakdown?: Record<string, GroupSummary[]>;
 }) {
   const [metric, setMetric] = useState<ProblemMetricId>("highRiskPct");
@@ -238,17 +238,13 @@ export function RankingView({
                               />
                             </div>
                           )}
-                          {statsByGroup[row.key] && (
-                            <>
-                              <h4
-                                className="text-sm font-semibold mb-4"
-                                style={{ color: "var(--text-primary)" }}
-                              >
-                                Полная статистика по «{row.key}»
-                              </h4>
-                              <StatsSections stats={statsByGroup[row.key]} />
-                            </>
-                          )}
+                          <Link
+                            href={`/?${exploreParam}=${encodeURIComponent(row.key)}`}
+                            className="inline-flex items-center gap-1.5 text-sm font-medium"
+                            style={{ color: "var(--series-1)" }}
+                          >
+                            Полная статистика по «{row.key}» на странице «Общее» →
+                          </Link>
                         </div>
                       </td>
                     </tr>

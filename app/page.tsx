@@ -3,8 +3,14 @@ import { Explorer } from "@/components/Explorer";
 
 export const dynamic = "force-dynamic";
 
-export default async function OverviewPage() {
+export default async function OverviewPage(props: PageProps<"/">) {
+  const searchParams = await props.searchParams;
   const respondents = await getRespondents();
+
+  const initialFilial =
+    typeof searchParams.filial === "string" ? searchParams.filial : undefined;
+  const initialDept =
+    typeof searchParams.dept === "string" ? searchParams.dept : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -20,7 +26,11 @@ export default async function OverviewPage() {
           или оставьте «Все», чтобы увидеть данные по всей компании
         </p>
       </div>
-      <Explorer respondents={respondents} />
+      <Explorer
+        respondents={respondents}
+        initialFilial={initialFilial}
+        initialDept={initialDept}
+      />
     </div>
   );
 }

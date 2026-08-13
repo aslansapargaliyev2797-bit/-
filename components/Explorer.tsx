@@ -48,10 +48,20 @@ function Select({
   );
 }
 
-export function Explorer({ respondents }: { respondents: Respondent[] }) {
-  const [selFilial, setSelFilial] = useState(ALL);
+export function Explorer({
+  respondents,
+  initialFilial,
+  initialDept,
+}: {
+  respondents: Respondent[];
+  /** Pre-select a filial/service on mount — e.g. coming from a "смотреть полную
+   *  статистику" link on the Филиалы/Службы pages (?filial=... / ?dept=...). */
+  initialFilial?: string;
+  initialDept?: string;
+}) {
+  const [selFilial, setSelFilial] = useState(initialFilial ?? ALL);
   const [selUnit, setSelUnit] = useState(ALL);
-  const [selDept, setSelDept] = useState(ALL);
+  const [selDept, setSelDept] = useState(initialDept ?? ALL);
 
   const filialOptions = useMemo(() => {
     const order = new Map<string, number>();

@@ -1,7 +1,5 @@
 import { getRespondents } from "@/lib/data";
-import { computeStats } from "@/lib/aggregate";
 import { groupBy, toSummary, type GroupSummary } from "@/lib/ranking";
-import type { Stats } from "@/lib/stats-types";
 import { RankingView } from "@/components/RankingView";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +10,8 @@ export default async function FilialsPage() {
   const groups = groupBy(respondents, (r) => r.filial);
   const rows: GroupSummary[] = groups.map(toSummary);
 
-  const statsByGroup: Record<string, Stats> = {};
   const unitBreakdown: Record<string, GroupSummary[]> = {};
   for (const g of groups) {
-    statsByGroup[g.key] = computeStats(g.respondents);
     const units = groupBy(g.respondents, (r) => r.unit ?? "Без структурной единицы");
     unitBreakdown[g.key] = units.map(toSummary);
   }
@@ -33,7 +29,7 @@ export default async function FilialsPage() {
       <RankingView
         dimensionLabel="Филиал"
         rows={rows}
-        statsByGroup={statsByGroup}
+        exploreParam="filial"
         unitBreakdown={unitBreakdown}
       />
     </div>
