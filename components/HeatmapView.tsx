@@ -165,7 +165,8 @@ export function HeatmapView({ data }: { data: MatrixData }) {
                   {departments.map((d) => {
                     const key = `${f}${CELL_SEP}${d}`;
                     const cell = data.cells[key];
-                    const pct = cell?.highRiskPct ?? 0;
+                    const highRisk = cell?.metrics.highRiskPct;
+                    const pct = highRisk?.value ?? 0;
                     return (
                       <td key={d} className="p-0.5">
                         <button
@@ -181,7 +182,7 @@ export function HeatmapView({ data }: { data: MatrixData }) {
                           }}
                           title={
                             cell
-                              ? `${f} × ${d}: ${cell.highRiskCount} из ${cell.count} чел. (${pct.toFixed(1)}%) — высокий риск`
+                              ? `${f} × ${d}: ${highRisk?.num ?? 0} из ${cell.count} чел. (${pct.toFixed(1)}%) — высокий риск`
                               : "Нет анкет в этом сочетании"
                           }
                         >
@@ -207,7 +208,7 @@ export function HeatmapView({ data }: { data: MatrixData }) {
       {selectedStats && selectedCell && (
         <Card
           title={`${selFilial} × ${selDept}`}
-          subtitle={`${selectedCell.count} анкет · ${selectedCell.highRiskPct.toFixed(1)}% высокого риска (${selectedCell.highRiskCount} чел.)`}
+          subtitle={`${selectedCell.count} анкет · ${(selectedCell.metrics.highRiskPct.value ?? 0).toFixed(1)}% высокого риска (${selectedCell.metrics.highRiskPct.num ?? 0} чел.)`}
         >
           <StatsSections stats={selectedStats} />
         </Card>

@@ -3,17 +3,18 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  PROBLEM_METRICS,
-  formatMetricValue,
-  formatMetricDetail,
-  type GroupSummary,
-  type ProblemMetricId,
-} from "@/lib/ranking";
+  METRICS,
+  METRIC_GROUPS,
+  getMetric,
+  formatMetricResult,
+  formatMetricDetailResult,
+} from "@/lib/metrics";
+import type { GroupSummary } from "@/lib/ranking";
 import { Card } from "./Card";
 import { BarList } from "./BarList";
 
-function metricValue(row: GroupSummary, metric: ProblemMetricId): number {
-  const v = row[metric];
+function metricValue(row: GroupSummary, metricId: string): number {
+  const v = row.metrics[metricId]?.value;
   return v ?? -Infinity;
 }
 
@@ -35,46 +36,49 @@ export function RankingView({
   exploreParam: "filial" | "dept";
   unitBreakdown?: Record<string, GroupSummary[]>;
 }) {
-  const [metric, setMetric] = useState<ProblemMetricId>("highRiskPct");
+  const [metricId, setMetricId] = useState("highRiskPct");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const metric = getMetric(metricId);
 
   const sorted = useMemo(
-    () => [...rows].sort((a, b) => metricValue(b, metric) - metricValue(a, metric)),
-    [rows, metric]
+    () => [...rows].sort((a, b) => metricValue(b, metricId) - metricValue(a, metricId)),
+    [rows, metricId]
   );
 
   const top = sorted.slice(0, 5);
   const barData = sorted.map((r) => ({
     label: r.key,
     count: r.count,
-    pct:
-      metric === "avgScore" || metric === "avgBmi"
-        ? metricValue(r, metric)
-        : metricValue(r, metric),
+    pct: metricValue(r, metricId),
   }));
-  const maxForColor = metric === "highRiskPct" || metric === "moderateRiskPct";
+  const colorable = metric.isPercent;
 
   return (
     <div className="flex flex-col gap-6">
-      <Card
-        title={`Топ проблемных: ${dimensionLabel.toLowerCase()}`}
-        subtitle="Метрика определяет ранжирование"
-      >
-        <div className="flex flex-wrap gap-2 mb-4">
-          {PROBLEM_METRICS.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setMetric(m.id)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-              style={{
-                background: metric === m.id ? "var(--series-1)" : "var(--gridline)",
-                color: metric === m.id ? "#fff" : "var(--text-secondary)",
-              }}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+      <Card title={`Рейтинг: ${dimensionLabel.toLowerCase()}`} subtitle="Метрика для сравнения и сортировки">
+        <label className="flex flex-col gap-1 text-xs mb-4 max-w-sm" style={{ color: "var(--text-muted)" }}>
+          Метрика
+          <select
+            value={metricId}
+            onChange={(e) => setMetricId(e.target.value)}
+            className="rounded-lg border px-3 py-2 text-sm"
+            style={{
+              borderColor: "var(--border)",
+              background: "var(--surface-1)",
+              color: "var(--text-primary)",
+            }}
+          >
+            {METRIC_GROUPS.map((group) => (
+              <optgroup key={group} label={group}>
+                {METRICS.filter((m) => m.group === group).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
 
         <ol className="flex flex-col gap-2">
           {top.map((row, i) => (
@@ -102,13 +106,13 @@ export function RankingView({
                 <span
                   className="block text-sm font-semibold tabular-nums"
                   style={{
-                    color: maxForColor ? riskColor(metricValue(row, metric)) : "var(--text-primary)",
+                    color: colorable ? riskColor(metricValue(row, metricId)) : "var(--text-primary)",
                   }}
                 >
-                  {formatMetricValue(row, metric)}
+                  {formatMetricResult(row.metrics[metricId])}
                 </span>
                 <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
-                  {formatMetricDetail(row, metric)}
+                  {formatMetricDetailResult(row.metrics[metricId], row.count)}
                 </span>
               </span>
             </li>
@@ -118,21 +122,21 @@ export function RankingView({
 
       <Card
         title={`Все: ${dimensionLabel.toLowerCase()}`}
-        subtitle={PROBLEM_METRICS.find((m) => m.id === metric)?.label}
+        subtitle={metric.label}
       >
         <BarList
           data={barData}
           valueText={(label) => {
             const row = sorted.find((r) => r.key === label);
-            return row ? formatMetricValue(row, metric) : "";
+            return row ? formatMetricResult(row.metrics[metricId]) : "";
           }}
           detailFor={(label) => {
             const row = sorted.find((r) => r.key === label);
-            return row ? formatMetricDetail(row, metric) : undefined;
+            return row ? formatMetricDetailResult(row.metrics[metricId], row.count) : undefined;
           }}
-          colorFor={maxForColor ? (label) => {
+          colorFor={colorable ? (label) => {
             const row = sorted.find((r) => r.key === label);
-            return row ? riskColor(metricValue(row, metric)) : "var(--series-1)";
+            return row ? riskColor(metricValue(row, metricId)) : "var(--series-1)";
           } : undefined}
           color="var(--series-1)"
         />
@@ -140,14 +144,14 @@ export function RankingView({
 
       <Card title="Таблица" subtitle="Нажмите на строку, чтобы раскрыть подробную статистику">
         <div className="overflow-x-auto -mx-5 px-5">
-          <table className="w-full text-sm border-collapse min-w-[640px]">
+          <table className="w-full text-sm border-collapse min-w-[720px]">
             <thead>
               <tr style={{ color: "var(--text-muted)" }} className="text-left">
                 <th className="py-2 pr-3 font-medium">{dimensionLabel}</th>
                 <th className="py-2 px-3 font-medium text-right">Анкет</th>
-                <th className="py-2 px-3 font-medium text-right">Ср. балл</th>
-                <th className="py-2 px-3 font-medium text-right">% высокий риск</th>
-                <th className="py-2 px-3 font-medium text-right">% умеренный риск</th>
+                <th className="py-2 px-3 font-medium text-right">{metric.label}</th>
+                <th className="py-2 px-3 font-medium text-right">% высокого риска</th>
+                <th className="py-2 px-3 font-medium text-right">% умеренного риска</th>
                 <th className="py-2 px-3 font-medium text-right">% курящих</th>
                 <th className="py-2 pl-3 font-medium">Топ-фактор риска</th>
               </tr>
@@ -171,29 +175,33 @@ export function RankingView({
                     <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "var(--text-secondary)" }}>
                       {row.count}
                     </td>
-                    <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "var(--text-secondary)" }}>
-                      {row.avgScore !== null ? row.avgScore.toFixed(1) : "—"}
-                    </td>
                     <td
                       className="py-2.5 px-3 text-right tabular-nums font-medium"
-                      style={{ color: riskColor(row.highRiskPct) }}
-                      title={`${row.highRiskCount} из ${row.count} чел.`}
+                      style={{ color: colorable ? riskColor(metricValue(row, metricId)) : "var(--text-primary)" }}
+                      title={formatMetricDetailResult(row.metrics[metricId], row.count)}
                     >
-                      {row.highRiskPct.toFixed(1)}%
+                      {formatMetricResult(row.metrics[metricId])}
+                    </td>
+                    <td
+                      className="py-2.5 px-3 text-right tabular-nums"
+                      style={{ color: riskColor(row.metrics.highRiskPct.value ?? 0) }}
+                      title={formatMetricDetailResult(row.metrics.highRiskPct, row.count)}
+                    >
+                      {formatMetricResult(row.metrics.highRiskPct)}
                     </td>
                     <td
                       className="py-2.5 px-3 text-right tabular-nums"
                       style={{ color: "var(--text-secondary)" }}
-                      title={`${row.moderateRiskCount} из ${row.count} чел.`}
+                      title={formatMetricDetailResult(row.metrics.moderateRiskPct, row.count)}
                     >
-                      {row.moderateRiskPct.toFixed(1)}%
+                      {formatMetricResult(row.metrics.moderateRiskPct)}
                     </td>
                     <td
                       className="py-2.5 px-3 text-right tabular-nums"
                       style={{ color: "var(--text-secondary)" }}
-                      title={`${row.smokingCount} из ${row.count} чел.`}
+                      title={formatMetricDetailResult(row.metrics.smokingNowPct, row.count)}
                     >
-                      {row.smokingPct.toFixed(1)}%
+                      {formatMetricResult(row.metrics.smokingNowPct)}
                     </td>
                     <td className="py-2.5 pl-3" style={{ color: "var(--text-secondary)" }}>
                       {row.topRiskFactor ?? "—"}
@@ -221,19 +229,19 @@ export function RankingView({
                                 data={unitBreakdown[row.key].map((u) => ({
                                   label: u.key,
                                   count: u.count,
-                                  pct: u.highRiskPct,
+                                  pct: u.metrics.highRiskPct.value ?? 0,
                                 }))}
                                 valueText={(label) => {
                                   const u = unitBreakdown[row.key].find((x) => x.key === label);
-                                  return u ? `${u.highRiskPct.toFixed(1)}%` : "";
+                                  return u ? formatMetricResult(u.metrics.highRiskPct) : "";
                                 }}
                                 detailFor={(label) => {
                                   const u = unitBreakdown[row.key].find((x) => x.key === label);
-                                  return u ? `${u.highRiskCount} из ${u.count} чел.` : undefined;
+                                  return u ? formatMetricDetailResult(u.metrics.highRiskPct, u.count) : undefined;
                                 }}
                                 colorFor={(label) => {
                                   const u = unitBreakdown[row.key].find((x) => x.key === label);
-                                  return u ? riskColor(u.highRiskPct) : "var(--series-1)";
+                                  return u ? riskColor(u.metrics.highRiskPct.value ?? 0) : "var(--series-1)";
                                 }}
                               />
                             </div>
