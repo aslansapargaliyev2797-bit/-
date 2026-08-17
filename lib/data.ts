@@ -104,6 +104,14 @@ function toRespondent(cols: string[]): Respondent | null {
 export const getRespondents = cache(async (): Promise<Respondent[]> => {
   const res = await fetch(sheetCsvUrl(), {
     next: { revalidate: REVALIDATE_SECONDS },
+    headers: {
+      // Google's gviz export can respond differently (a consent/HTML page
+      // instead of CSV) to requests that look automated — a plain
+      // datacenter fetch with no UA/Accept headers is exactly that.
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      Accept: "text/csv,*/*",
+    },
   });
   if (!res.ok) {
     throw new Error(
@@ -111,6 +119,16 @@ export const getRespondents = cache(async (): Promise<Respondent[]> => {
     );
   }
   const csvText = await res.text();
+
+  // Google returns 200 with an HTML page instead of CSV for some blocked/
+  // rate-limited requests — parsing that as CSV silently "succeeds" with
+  // near-nothing usable, instead of failing loudly. Catch that here.
+  const head = csvText.trimStart().slice(0, 100).toLowerCase();
+  if (head.startsWith("<!doctype") || head.startsWith("<html")) {
+    throw new Error(
+      "Google вернул HTML вместо CSV (похоже, запрос заблокирован или ограничен) — попробуйте обновить страницу через минуту"
+    );
+  }
 
   const parsed = Papa.parse<string[]>(csvText, {
     skipEmptyLines: true,
@@ -129,6 +147,21 @@ export const getRespondents = cache(async (): Promise<Respondent[]> => {
     const r = toRespondent(cols);
     if (r) respondents.push(r);
   }
+
+  // Visible in Vercel's function logs — the fastest way to tell "we got a
+  // truncated response from Google" apart from "we parsed everything but
+  // dropped rows ourselves" if the count ever looks wrong again.
+  console.log(
+    `[data] fetched ${csvText.length} bytes, ${parsed.data.length} CSV rows, ${respondents.length} valid respondents` +
+      (parsed.errors.length > 0 ? `, ${parsed.errors.length} parse warnings` : "")
+  );
+
+  if (respondents.length === 0) {
+    throw new Error(
+      "Таблица прочитана, но не найдено ни одной анкеты — вероятно, проблема с форматом ответа"
+    );
+  }
+
   return respondents;
 });
 
